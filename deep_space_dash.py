@@ -21,50 +21,74 @@ BLACK = (0, 0, 0)
 WHITE = (255, 255, 255)
 BLUE = (100, 150, 255)
 RED = (255, 100, 100)
-GRAY = (100, 100, 100)
+GREEN = (100, 255, 100)
 YELLOW = (255, 255, 100)
+GRAY = (100, 100, 100)
 ORANGE = (255, 165, 0)
 
-# Game scaling - determines how fast distance accumulates
-MILES_PER_PIXEL = 10_000  # Each pixel scrolled = 10,000 miles
+# Ship color options
+SHIP_COLORS = {
+    'red': (255, 50, 50),
+    'green': (50, 255, 50),
+    'blue': (100, 150, 255),
+    'yellow': (255, 255, 50)
+}
 
-# Difficulty progression
+# Game scaling - determines how fast distance accumulates
+KM_PER_PIXEL = 16_093  # Approximately 10,000 miles converted to km
+
+# Speed mechanics
 INITIAL_OBSTACLE_SPEED = 3
+BASE_SPEED = 3  # Base scrolling speed
 MAX_OBSTACLE_SPEED = 10
 SPEED_INCREASE_RATE = 0.0005  # Speed increase per frame
+BOOST_SPEED = 8  # Additional speed when holding right arrow
+MAX_BOOST_SPEED = 15  # Maximum speed with boost
 
+# Difficulty progression
 INITIAL_SPAWN_DELAY = 90  # Frames between spawns
 MIN_SPAWN_DELAY = 30
 SPAWN_DECREASE_RATE = 0.01  # Decrease spawn delay over time
 
-# Planet milestones (in miles from Earth)
+# Planet milestones (in km from Earth)
 PLANET_MILESTONES = [
-    ("Moon", 238_900),
-    ("Mars", 140_000_000),
-    ("Jupiter", 484_000_000),
-    ("Saturn", 890_000_000),
-    ("Uranus", 1_780_000_000),
-    ("Neptune", 2_800_000_000),
-    ("Pluto", 3_670_000_000),
+    ("Moon", 384_400),
+    ("Mars", 225_300_000),
+    ("Jupiter", 778_500_000),
+    ("Saturn", 1_433_000_000),
+    ("Uranus", 2_871_000_000),
+    ("Neptune", 4_495_000_000),
 ]
+
+# Random name generators for procedural content
+PLANET_PREFIXES = ["Zeta", "Alpha", "Beta", "Gamma", "Delta", "Epsilon", "Sigma", 
+                   "Omega", "Nova", "Stellar", "Cosmic", "Nebula", "Quantum", "Hyper"]
+PLANET_SUFFIXES = ["Prime", "Major", "Minor", "Centauri", "Proxima", "Ultima", 
+                   "Secundus", "Tertius", "Rex", "Magna", "Nova"]
+
+GALAXY_PREFIXES = ["Andromeda", "Triangulum", "Whirlpool", "Sombrero", "Pinwheel",
+                   "Cartwheel", "Sunflower", "Tadpole", "Sculptor", "Phoenix"]
+GALAXY_SUFFIXES = ["Cluster", "Nebula", "Expanse", "Sector", "Quadrant", "Region",
+                   "Domain", "Realm", "Territory", "Zone"]
 
 # Game states
 MENU = 0
-RUNNING = 1
-GAME_OVER = 2
-PAUSED = 3
+COLOR_SELECT = 1
+RUNNING = 2
+GAME_OVER = 3
+PAUSED = 4
 
 
 class Spaceship:
     """Player's spaceship"""
     
-    def __init__(self, x: int, y: int):
+    def __init__(self, x: int, y: int, color: Tuple[int, int, int]):
         self.x = x
         self.y = y
         self.width = 40
         self.height = 30
         self.speed = 5
-        self.color = BLUE
+        self.color = color
         
     def move(self, dy: int):
         """Move ship up or down, clamped to screen bounds"""
@@ -102,9 +126,9 @@ class Obstacle:
         # Random variation for visual interest
         self.color_variation = random.randint(-20, 20)
         
-    def update(self):
-        """Move obstacle left"""
-        self.x -= self.speed
+    def update(self, speed_multiplier: float = 1.0):
+        """Move obstacle left with optional speed multiplier"""
+        self.x -= self.speed * speed_multiplier
         
     def draw(self, screen: pygame.Surface):
         """Draw the obstacle as a circle with some texture"""
@@ -145,20 +169,24 @@ class HUD:
         text_surface = font.render(text, True, color)
         screen.blit(text_surface, (x, y))
         
-    def draw_game_hud(self, screen: pygame.Surface, distance: int, score: int, 
-                     next_planet: str, distance_to_planet: int):
+    def draw_game_hud(self, screen: pygame.Surface, distance: int, speed: float,
+                     score: int, next_planet: str, distance_to_planet: int):
         """Draw HUD during gameplay"""
-        # Left side - Distance
-        distance_text = f"Distance: {distance:,} mi"
+        # Left side - Distance and Speed
+        distance_text = f"Distance: {distance:,} km"
         self.draw_text_with_shadow(screen, distance_text, 20, 20, self.font, WHITE)
+        
+        # Speed display
+        speed_text = f"Speed: {speed:.1f} km/s"
+        self.draw_text_with_shadow(screen, speed_text, 20, 55, self.small_font, GREEN)
         
         # Distance from Earth and next planet
         planet_info = f"From Earth | Next: {next_planet}"
-        self.draw_text_with_shadow(screen, planet_info, 20, 55, self.small_font, YELLOW)
+        self.draw_text_with_shadow(screen, planet_info, 20, 85, self.small_font, YELLOW)
         
         if distance_to_planet > 0:
-            distance_info = f"{distance_to_planet:,} mi to {next_planet}"
-            self.draw_text_with_shadow(screen, distance_info, 20, 80, self.small_font, WHITE)
+            distance_info = f"{distance_to_planet:,} km to {next_planet}"
+            self.draw_text_with_shadow(screen, distance_info, 20, 110, self.small_font, WHITE)
         
         # Right side - Score
         score_text = f"Score: {score}"
@@ -166,9 +194,12 @@ class HUD:
         score_x = SCREEN_WIDTH - score_surface.get_width() - 20
         self.draw_text_with_shadow(screen, score_text, score_x, 20, self.font, WHITE)
         
-    def show_milestone(self, planet_name: str, distance: int):
+    def show_milestone(self, name: str, distance: int, is_galaxy: bool = False):
         """Trigger a milestone toast notification"""
-        self.milestone_text = f"You passed {planet_name}! ({distance:,} mi)"
+        if is_galaxy:
+            self.milestone_text = f"Entering {name}!"
+        else:
+            self.milestone_text = f"You passed {name}! ({distance:,} km)"
         self.milestone_timer = 180  # Show for 3 seconds at 60 FPS
         
     def draw_milestone_toast(self, screen: pygame.Surface):
@@ -202,35 +233,59 @@ class Game:
         self.clock = pygame.time.Clock()
         self.state = MENU
         
+        # Color selection
+        self.selected_color = 'blue'
+        
         # Game objects
         self.ship = None
         self.obstacles: List[Obstacle] = []
         self.hud = HUD()
         
         # Game variables
-        self.distance = 0  # Total distance in miles
+        self.distance = 0  # Total distance in km
         self.pixels_traveled = 0  # For distance calculation
+        self.current_speed = BASE_SPEED  # Current scrolling speed
         self.score = 0
         self.obstacle_speed = INITIAL_OBSTACLE_SPEED
         self.spawn_delay = INITIAL_SPAWN_DELAY
         self.spawn_timer = 0
         self.frame_count = 0
+        self.is_boosting = False
         
         # Milestone tracking
         self.milestone_index = 0  # Index of next milestone to reach
         self.last_planet_passed = "Earth"
+        self.passed_neptune = False
+        self.procedural_milestones = []  # Generated milestones after Neptune
+        self.next_procedural_distance = 5_000_000_000  # Start 500M km after Neptune
         
         # Stars for background
         self.stars = [(random.randint(0, SCREEN_WIDTH), 
                       random.randint(0, SCREEN_HEIGHT),
                       random.randint(1, 3)) for _ in range(100)]
         
+    def generate_procedural_milestone(self):
+        """Generate a random planet or galaxy name"""
+        if random.random() < 0.7:  # 70% chance for planet
+            name = f"{random.choice(PLANET_PREFIXES)}-{random.choice(PLANET_SUFFIXES)}"
+            is_galaxy = False
+        else:  # 30% chance for galaxy
+            name = f"{random.choice(GALAXY_PREFIXES)} {random.choice(GALAXY_SUFFIXES)}"
+            is_galaxy = True
+        
+        milestone = (name, self.next_procedural_distance, is_galaxy)
+        self.procedural_milestones.append(milestone)
+        
+        # Next milestone will be 300M-800M km further
+        self.next_procedural_distance += random.randint(300_000_000, 800_000_000)
+        
     def reset_game(self):
         """Reset game state for new run"""
-        self.ship = Spaceship(100, SCREEN_HEIGHT // 2)
+        self.ship = Spaceship(100, SCREEN_HEIGHT // 2, SHIP_COLORS[self.selected_color])
         self.obstacles = []
         self.distance = 0
         self.pixels_traveled = 0
+        self.current_speed = BASE_SPEED
         self.score = 0
         self.obstacle_speed = INITIAL_OBSTACLE_SPEED
         self.spawn_delay = INITIAL_SPAWN_DELAY
@@ -238,7 +293,11 @@ class Game:
         self.frame_count = 0
         self.milestone_index = 0
         self.last_planet_passed = "Earth"
+        self.passed_neptune = False
+        self.procedural_milestones = []
+        self.next_procedural_distance = 5_000_000_000
         self.hud.milestone_timer = 0
+        self.is_boosting = False
         
     def handle_input(self):
         """Process keyboard input"""
@@ -246,6 +305,23 @@ class Game:
         
         if self.state == MENU:
             if keys[pygame.K_SPACE]:
+                self.state = COLOR_SELECT
+                
+        elif self.state == COLOR_SELECT:
+            if keys[pygame.K_1]:
+                self.selected_color = 'red'
+                self.reset_game()
+                self.state = RUNNING
+            elif keys[pygame.K_2]:
+                self.selected_color = 'green'
+                self.reset_game()
+                self.state = RUNNING
+            elif keys[pygame.K_3]:
+                self.selected_color = 'blue'
+                self.reset_game()
+                self.state = RUNNING
+            elif keys[pygame.K_4]:
+                self.selected_color = 'yellow'
                 self.reset_game()
                 self.state = RUNNING
                 
@@ -255,6 +331,9 @@ class Game:
                 self.ship.move(-1)
             if keys[pygame.K_s] or keys[pygame.K_DOWN]:
                 self.ship.move(1)
+                
+            # Boost with right arrow
+            self.is_boosting = keys[pygame.K_RIGHT]
                 
             # Pause
             if keys[pygame.K_p]:
@@ -266,8 +345,7 @@ class Game:
                 
         elif self.state == GAME_OVER:
             if keys[pygame.K_r]:
-                self.reset_game()
-                self.state = RUNNING
+                self.state = COLOR_SELECT
                 
     def update_game(self):
         """Update game state during gameplay"""
@@ -276,15 +354,21 @@ class Game:
             
         self.frame_count += 1
         
-        # Update distance traveled
-        self.pixels_traveled += self.obstacle_speed
-        self.distance = int(self.pixels_traveled * MILES_PER_PIXEL)
+        # Calculate current speed with boost
+        if self.is_boosting:
+            self.current_speed = min(MAX_BOOST_SPEED, self.obstacle_speed + BOOST_SPEED)
+        else:
+            self.current_speed = self.obstacle_speed
+        
+        # Update distance traveled based on current speed
+        self.pixels_traveled += self.current_speed
+        self.distance = int(self.pixels_traveled * KM_PER_PIXEL)
         
         # Increase score (1 point per second)
         if self.frame_count % 60 == 0:
             self.score += 1
         
-        # Gradually increase difficulty
+        # Gradually increase base difficulty
         self.obstacle_speed = min(MAX_OBSTACLE_SPEED, 
                                  self.obstacle_speed + SPEED_INCREASE_RATE)
         self.spawn_delay = max(MIN_SPAWN_DELAY, 
@@ -297,9 +381,12 @@ class Game:
             self.obstacles.append(Obstacle(SCREEN_WIDTH, y, self.obstacle_speed))
             self.spawn_timer = 0
         
+        # Calculate speed multiplier for obstacles when boosting
+        speed_multiplier = self.current_speed / self.obstacle_speed
+        
         # Update obstacles
         for obstacle in self.obstacles[:]:
-            obstacle.update()
+            obstacle.update(speed_multiplier)
             
             # Remove off-screen obstacles
             if obstacle.is_off_screen():
@@ -310,7 +397,7 @@ class Game:
             if self.ship.get_rect().colliderect(obstacle.get_rect()):
                 self.state = GAME_OVER
                 
-        # Check for milestone achievements
+        # Check for milestone achievements (original planets)
         if self.milestone_index < len(PLANET_MILESTONES):
             planet_name, planet_distance = PLANET_MILESTONES[self.milestone_index]
             if self.distance >= planet_distance:
@@ -318,20 +405,52 @@ class Game:
                 self.last_planet_passed = planet_name
                 self.milestone_index += 1
                 
+                # Check if we just passed Neptune
+                if planet_name == "Neptune":
+                    self.passed_neptune = True
+                    # Show special message
+                    self.hud.milestone_text = "You are leaving our solar system!"
+                    self.hud.milestone_timer = 240  # Show for 4 seconds
+                    # Generate first procedural milestone
+                    self.generate_procedural_milestone()
+        
+        # Check procedural milestones (after Neptune)
+        elif self.passed_neptune:
+            # Make sure we have upcoming milestones
+            if not self.procedural_milestones or self.distance >= self.procedural_milestones[-1][1]:
+                self.generate_procedural_milestone()
+            
+            # Check if we've reached any procedural milestone
+            for i, (name, distance, is_galaxy) in enumerate(self.procedural_milestones):
+                if self.distance >= distance and distance > 0:
+                    self.hud.show_milestone(name, distance, is_galaxy)
+                    self.last_planet_passed = name
+                    # Mark as passed by setting distance to -1
+                    self.procedural_milestones[i] = (name, -1, is_galaxy)
+                    
     def get_next_planet_info(self) -> Tuple[str, int]:
         """Get name and distance to next planet milestone"""
+        # Check original milestones
         if self.milestone_index < len(PLANET_MILESTONES):
             planet_name, planet_distance = PLANET_MILESTONES[self.milestone_index]
             distance_to_planet = planet_distance - self.distance
             return planet_name, distance_to_planet
-        else:
-            return "Deep Space", 0
+        
+        # Check procedural milestones
+        elif self.procedural_milestones:
+            for name, distance, is_galaxy in self.procedural_milestones:
+                if distance > 0 and self.distance < distance:
+                    distance_to_planet = distance - self.distance
+                    return name, distance_to_planet
+        
+        return "Deep Space", 0
             
     def draw_stars(self):
         """Draw animated star field background"""
         for i, (x, y, size) in enumerate(self.stars):
-            # Move stars left to simulate motion
-            new_x = x - self.obstacle_speed * 0.3
+            # Move stars left to simulate motion (faster when boosting)
+            move_speed = self.current_speed * 0.3 if self.state == RUNNING else BASE_SPEED * 0.3
+            new_x = x - move_speed
             if new_x < 0:
                 new_x = SCREEN_WIDTH
                 y = random.randint(0, SCREEN_HEIGHT)
@@ -357,6 +476,7 @@ class Game:
             "Controls:",
             "W / UP ARROW - Move Up",
             "S / DOWN ARROW - Move Down",
+            "RIGHT ARROW - Boost Speed",
             "P - Pause Game",
             "",
             "Press SPACE to Start"
@@ -369,6 +489,48 @@ class Game:
             self.screen.blit(text, text_rect)
             y += 40
             
+    def draw_color_select(self):
+        """Draw color selection screen"""
+        self.screen.fill(BLACK)
+        self.draw_stars()
+        
+        # Title
+        title_font = pygame.font.Font(None, 56)
+        title = title_font.render("Choose Your Spaceship Color", True, WHITE)
+        title_rect = title.get_rect(center=(SCREEN_WIDTH // 2, 100))
+        self.screen.blit(title, title_rect)
+        
+        # Color options
+        font = pygame.font.Font(None, 40)
+        y = 250
+        spacing = 80
+        
+        colors = [
+            ('1', 'RED', SHIP_COLORS['red']),
+            ('2', 'GREEN', SHIP_COLORS['green']),
+            ('3', 'BLUE', SHIP_COLORS['blue']),
+            ('4', 'YELLOW', SHIP_COLORS['yellow'])
+        ]
+        
+        for key, name, color in colors:
+            text = font.render(f"Press {key} - {name}", True, color)
+            text_rect = text.get_rect(center=(SCREEN_WIDTH // 2, y))
+            self.screen.blit(text, text_rect)
+            
+            # Draw small spaceship preview
+            preview_x = SCREEN_WIDTH // 2 - 150
+            preview_y = y
+            points = [
+                (preview_x + 30, preview_y),
+                (preview_x, preview_y - 10),
+                (preview_x, preview_y + 10)
+            ]
+            pygame.draw.polygon(self.screen, color, points)
+            pygame.draw.circle(self.screen, ORANGE, (preview_x + 5, preview_y), 6)
+            pygame.draw.circle(self.screen, YELLOW, (preview_x + 5, preview_y), 4)
+            
+            y += spacing
+            
     def draw_game(self):
         """Draw gameplay screen"""
         self.screen.fill(BLACK)
@@ -379,10 +541,17 @@ class Game:
         for obstacle in self.obstacles:
             obstacle.draw(self.screen)
             
+        # Draw boost indicator
+        if self.is_boosting:
+            boost_font = pygame.font.Font(None, 48)
+            boost_text = boost_font.render("BOOST!", True, ORANGE)
+            boost_rect = boost_text.get_rect(center=(SCREEN_WIDTH // 2, 50))
+            self.screen.blit(boost_text, boost_rect)
+            
         # Draw HUD
         next_planet, distance_to_planet = self.get_next_planet_info()
-        self.hud.draw_game_hud(self.screen, self.distance, self.score, 
-                              next_planet, distance_to_planet)
+        self.hud.draw_game_hud(self.screen, self.distance, self.current_speed,
+                              self.score, next_planet, distance_to_planet)
         
         # Draw milestone toast if active
         self.hud.draw_milestone_toast(self.screen)
@@ -416,21 +585,22 @@ class Game:
         # Title
         title_font = pygame.font.Font(None, 72)
         title = title_font.render("GAME OVER", True, RED)
-        title_rect = title.get_rect(center=(SCREEN_WIDTH // 2, 150))
+        title_rect = title.get_rect(center=(SCREEN_WIDTH // 2, 120))
         self.screen.blit(title, title_rect)
         
         # Stats
         font = pygame.font.Font(None, 36)
         stats = [
             f"Final Score: {self.score}",
-            f"Distance Traveled: {self.distance:,} miles",
-            f"Last Planet Passed: {self.last_planet_passed}",
+            f"Distance Traveled: {self.distance:,} km",
+            f"Maximum Speed: {self.current_speed:.1f} km/s",
+            f"Last Location: {self.last_planet_passed}",
             "",
-            "Press R to Restart",
+            "Press R to Play Again",
             "Press ESC to Quit"
         ]
         
-        y = 280
+        y = 250
         for line in stats:
             text = font.render(line, True, WHITE if line else BLACK)
             text_rect = text.get_rect(center=(SCREEN_WIDTH // 2, y))
@@ -441,6 +611,8 @@ class Game:
         """Main draw function"""
         if self.state == MENU:
             self.draw_menu()
+        elif self.state == COLOR_SELECT:
+            self.draw_color_select()
         elif self.state == RUNNING:
             self.draw_game()
         elif self.state == PAUSED:
@@ -461,9 +633,7 @@ class Game:
                     running = False
                 elif event.type == pygame.KEYDOWN:
                     if event.key == pygame.K_ESCAPE:
-                        if self.state == GAME_OVER:
-                            running = False
-                        elif self.state == MENU:
+                        if self.state == GAME_OVER or self.state == MENU:
                             running = False
                             
             # Input handling
