@@ -48,21 +48,21 @@ SHIP_COLORS = {
     'yellow': (255, 255, 50)
 }
 
-# Game scaling
-KM_PER_PIXEL = 16_093
+# Game scaling - increased for faster progression
+KM_PER_PIXEL = 50_000  # Tripled from 16,093 to travel much faster
 KM_PER_LIGHT_YEAR = 9_460_730_472_580.8
 
 # Lives system
-EXTRA_LIFE_DISTANCE = 100_000
+EXTRA_LIFE_DISTANCE = 1_000_000_000  # Get extra life every 1 billion km
 MAX_EXTRA_LIVES = 3
 
 # Speed mechanics
 INITIAL_OBSTACLE_SPEED = 3
 BASE_SPEED = 3
-MAX_OBSTACLE_SPEED = 10
-SPEED_INCREASE_RATE = 0.0005
-BOOST_SPEED = 8
-MAX_BOOST_SPEED = 15
+MAX_OBSTACLE_SPEED = 15  # Increased from 10
+SPEED_INCREASE_RATE = 0.001  # Doubled speed increase rate
+BOOST_SPEED = 20  # Increased from 8 - much faster boost!
+MAX_BOOST_SPEED = 35  # Increased from 15 - super fast max speed!
 
 # Difficulty progression
 INITIAL_SPAWN_DELAY = 90
@@ -803,7 +803,7 @@ class Game:
             "RIGHT ARROW to boost",
             "Avoid asteroids and black holes!",
             "Collect portals to teleport forward!",
-            "Get extra lives every 100,000 km",
+            "Get extra lives every 1 billion km",
             "",
             "Press SPACE to Start",
             "Press L for Leaderboard"

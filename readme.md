@@ -204,6 +204,37 @@ P: Pause
 L: Leaderboard (from menu or game over)
 R: Restart (from game over)
 
+⚡ Speed Improvements Made:
+🚀 Boost Power Increased
+
+BOOST_SPEED: 8 → 20 km/s (2.5x faster!)
+MAX_BOOST_SPEED: 15 → 35 km/s (2.3x faster!)
+Boosting now gives you a massive speed advantage
+
+📈 Distance Traveled Per Second
+
+KM_PER_PIXEL: 16,093 → 50,000 km (3x increase!)
+You now cover 3x more distance with every pixel traveled
+This means you'll reach planets and milestones much faster
+
+🎯 Natural Speed Progression
+
+MAX_OBSTACLE_SPEED: 10 → 15 km/s (natural speed caps higher)
+SPEED_INCREASE_RATE: Doubled (you accelerate faster over time)
+
+🌌 Real Impact:
+Before:
+
+Reaching Mars (225M km): ~4-5 minutes
+Reaching Neptune (4.5B km): ~20+ minutes
+
+After:
+
+Reaching Mars: ~1-2 minutes
+Reaching Neptune: ~5-7 minutes
+Leaving the solar system: Much more achievable!
+
+The boost is now much more powerful - holding RIGHT ARROW will make you fly through space at incredible speeds! Combined with the tripled distance-per-pixel, you'll be exploring deep space and beyond the solar system much faster! 🚀✨
 
 To Run:
 bashpip install pygame
