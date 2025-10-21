@@ -134,6 +134,77 @@ Creates a natural progression: easy near Earth → intense in deep space
 ✅ Real-time speed display
 ✅ Milestone notifications
 
+View your complete game
+🎮 All New Features Implemented!
+🏆 Leaderboard System
+
+Top 10 high scores saved locally
+Saved to deep_space_dash_scores.json in the game directory
+Displays: Rank, Score, Distance (km + light years), Ship color, Date/Time
+Access from main menu (Press L)
+Shows your rank after game over
+Persists between game sessions
+
+🌌 Dual Distance Display
+
+Kilometers always shown
+Light Years displayed when distance > 0.001 LY
+Format: "Distance: 225,300,000 km (0.023810 LY)"
+Both units shown in leaderboard and game over screen
+
+❤️ Lives System
+
+Start with 0 extra lives
+Earn 1 extra life every 100,000 km traveled
+Maximum of 3 extra lives
+Lives counter shown in HUD (top-left)
+2 seconds of invulnerability after losing a life (ship flashes)
+Notification when earning/losing lives
+Game over only when all lives are lost
+
+🕳️ Black Holes
+
+Dangerous spinning vortex obstacles
+Purple/black appearance with swirling accretion disk
+Instant death on collision (same as regular obstacles)
+Worth +5 points for passing safely
+Rarer than asteroids
+
+🌀 Teleportation Portals
+
+Cyan pulsing portal appearance
+Teleports you forward by a random distance:
+
+100 km, 1,000 km, 10,000 km, 100,000 km
+1 million km, 10 million km, 100 million km
+1 BILLION km (max jump!)
+
+
+Shows notification with distance jumped
+Worth +10 points
+Can help you skip to distant milestones instantly!
+
+🎯 Complete Feature Summary
+✅ Local leaderboard (top 10, persistent save)
+✅ Distance in both km AND light years
+✅ Lives system (0 start, max 3, earn every 100k km)
+✅ Black holes (deadly spinning vortex)
+✅ Portals (random teleportation 100 km - 1 billion km)
+✅ Visual planets with realistic designs
+✅ Earth launch animation
+✅ Distance-based difficulty scaling
+✅ Speed boost mechanic
+✅ Color selection
+✅ Procedural universe after Neptune
+Controls:
+
+W/S or UP/DOWN: Move
+RIGHT ARROW: Boost speed
+P: Pause
+L: Leaderboard (from menu or game over)
+R: Restart (from game over)
+
+
 To Run:
 bashpip install pygame
 python deep_space_dash.py
